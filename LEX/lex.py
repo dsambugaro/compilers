@@ -67,17 +67,17 @@ def t_NUM_NOTACAO_CIENTIFICA(t):
     elif t.value[0] == 'e':
         t.value = 10**float(t.value[1:])
     else:
-        t.value = float(t.value)    
+        t.value = float(t.value)
     return t
 
 def t_NUM_PONTO_FLUTUANTE(t):
     r'\d*\.\d+'
-    t.value = float(t.value)    
+    t.value = float(t.value)
     return t
 
 def t_NUM_INTEIRO(t):
     r'\d+'
-    t.value = int(t.value)    
+    t.value = int(t.value)
     return t
 
 def t_ID(t):
@@ -87,6 +87,7 @@ def t_ID(t):
         ID_list.append(t)
     return t
 
+# Ignore Comments
 def t_COMMENT(t):
      r'{.*\n*.*}'
      pass
@@ -115,6 +116,7 @@ def main():
         data = open(argv[1])
     except IOError as e:
         print(e)
+
     text = data.read()
     lexer.input(text)
 
@@ -125,13 +127,14 @@ def main():
         pos = find_column(text, tok)
 
         # print format
-        # Line:Column Type Value
+        # Line:Column Type
         print("{:02d}:{:02d}\t{}".format(tok.lineno, pos, tok.type))
     
     print('\n==========================================')
     print('================ ID Table ================\n')
     for identifier in ID_list:
         pos = find_column(text, identifier)
+        # Line:LexColumn Type Lexeme
         print("{:02d}:{:02d}\t{} {}".format(identifier.lineno, identifier.lexpos, identifier.type, identifier.value))
 
 if __name__ == "__main__":
