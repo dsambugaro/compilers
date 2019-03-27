@@ -29,6 +29,7 @@ tokens = [
     'NUM_NOTACAO_CIENTIFICA',
     'OPERADOR_SOMA',
     'OPERADOR_MULTIPLICACAO',
+    'OPERADOR_RESTO',
     'OPERADOR_RELACIONAL',
     'OPERADOR_LOGICO',
     'OPERADOR_ATRIBUICAO',
@@ -39,7 +40,8 @@ tokens = [
     'FECHACOLCHETES',
     'DOISPONTOS',
     'VIRGULA',
-    'COMMENT'
+    'COMMENT',
+    'TEXTO'
 ]
 
 tokens += list(reserved.values())
@@ -47,6 +49,7 @@ tokens += list(reserved.values())
 # Regular expression rules for simple tokens
 t_OPERADOR_SOMA          = r'\+|-'
 t_OPERADOR_MULTIPLICACAO = r'\*|/'
+t_OPERADOR_RESTO         = r'%'
 t_OPERADOR_RELACIONAL    = r'>|<|=|<>|>=|<='
 t_OPERADOR_LOGICO        = r'&&|\|\|'
 t_OPERADOR_ATRIBUICAO    = r':='
@@ -57,6 +60,7 @@ t_ABRECOLCHETES          = r'\['
 t_FECHACOLCHETES         = r'\]'
 t_DOISPONTOS             = r':'
 t_VIRGULA                = r','
+t_TEXTO                  = r'\"[\d\D]*?\"'
 
 ID_list = []
 
@@ -89,7 +93,8 @@ def t_ID(t):
 
 # Ignore Comments
 def t_COMMENT(t):
-     r'{.*\n*.*}'
+     r'{[\d\D]*?}'
+     t.lexer.lineno += len(t.value.split('\n')) # Considering the lines of comments in the total number of lines in the input
      pass
 
 
