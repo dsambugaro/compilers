@@ -15,6 +15,9 @@ reserved = {
     'se':'SE',
     'então':'ENTAO',
     'senão':'SENAO',
+    'leia':'LEIA',
+    'escreva':'ESCREVA',
+    'retorna':'RETORNA',
     'fim':'FIM'
 }
 
@@ -25,12 +28,10 @@ tokens = [
     'NUM_PONTO_FLUTUANTE',
     'NUM_NOTACAO_CIENTIFICA',
     'OPERADOR_SOMA',
-    'OPERADOR_MENOS',
-    'OPERADOR_VEZES',
-    'OPERADOR_DIVISAO',
-    'OPERADOR_MAIOR',
-    'OPERADOR_MENOR',
-    'OPERADOR_IGUAL',
+    'OPERADOR_MULTIPLICACAO',
+    'OPERADOR_RELACIONAL',
+    'OPERADOR_LOGICO',
+    'OPERADOR_ATRIBUICAO',
     'OPERADOR_NEGACAO',
     'ABREPARENTESES',
     'FECHAPARENTESES',
@@ -44,13 +45,11 @@ tokens = [
 tokens += list(reserved.values())
 
 # Regular expression rules for simple tokens
-t_OPERADOR_SOMA          = r'\+'
-t_OPERADOR_MENOS         = r'-'
-t_OPERADOR_VEZES         = r'\*'
-t_OPERADOR_DIVISAO       = r'/'
-t_OPERADOR_MAIOR         = r'>'
-t_OPERADOR_MENOR         = r'<'
-t_OPERADOR_IGUAL         = r'='
+t_OPERADOR_SOMA          = r'\+|-'
+t_OPERADOR_MULTIPLICACAO = r'\*|/'
+t_OPERADOR_RELACIONAL    = r'>|<|=|<>|>=|<='
+t_OPERADOR_LOGICO        = r'&&|\|\|'
+t_OPERADOR_ATRIBUICAO    = r':='
 t_OPERADOR_NEGACAO       = r'!'
 t_ABREPARENTESES         = r'\('
 t_FECHAPARENTESES        = r'\)'
@@ -89,7 +88,7 @@ def t_ID(t):
     return t
 
 def t_COMMENT(t):
-     r'{.*}'
+     r'{.*\n*.*}'
      pass
 
 
@@ -127,7 +126,7 @@ def main():
 
         # print format
         # Line:Column Type Value
-        print("{:02d}:{:02d}\t{} {}".format(tok.lineno, pos, tok.type, tok.value))
+        print("{:02d}:{:02d}\t{}".format(tok.lineno, pos, tok.type))
     
     print('\n==========================================')
     print('================ ID Table ================\n')
