@@ -1,9 +1,10 @@
 #! /usr/bin/env python3
 #coding: utf-8
 
-from sys import argv
-
+from sys import argv, exit
 from ply import lex
+
+from MyExceptions import CommentInvalidSyntax
 
 # Reserved words
 reserved = {
@@ -94,7 +95,7 @@ def t_ID(t):
 # Ignore Comments
 def t_COMMENT(t):
      r'{[\d\D]*?}'
-     t.lexer.lineno += len(t.value.split('\n')) # Considering the lines of comments in the total number of lines in the input
+     t.lexer.lineno += len(t.value.split('\n'))-1 # Considering the lines of comments in the total number of lines in the input
      pass
 
 
@@ -113,14 +114,24 @@ t_ignore  = ' \t'
 # Error handling rule
 def t_error(t):
     print("Illegal character '%s'" % t.value[0])
-    t.lexer.skip(1)
+    try:
+        if t.value[0] == '{' or t.value[0] == '}':
+            t.lexer.skip(1)
+            raise CommentInvalidSyntax("Comment invalid syntax at line {}".format(t.lineno))
+    except CommentInvalidSyntax as error:
+        print("Error: {}\n".format(error))
+        print("Comment example:\n\t{This is a comment}\nComments are always between { }\n")
+        print("Please fix it")
+        print("\n")
+        exit(1)
 
 def main():
     lexer = lex.lex()
     try:
         data = open(argv[1])
-    except IOError as e:
+    except (IOError, IndexError) as e:
         print(e)
+        print("Tratar")
 
     text = data.read()
     lexer.input(text)
@@ -133,14 +144,14 @@ def main():
 
         # print format
         # Line:Column Type
-        print("{:02d}:{:02d}\t{}".format(tok.lineno, pos, tok.type))
+        # print("{:02d}:{:02d}\t{}".format(tok.lineno, pos, tok.type))
     
     print('\n==========================================')
     print('================ ID Table ================\n')
     for identifier in ID_list:
         pos = find_column(text, identifier)
         # Line:LexColumn Type Lexeme
-        print("{:02d}:{:02d}\t{} {}".format(identifier.lineno, identifier.lexpos, identifier.type, identifier.value))
+        # print("{:02d}:{:02d}\t{} {}".format(identifier.lineno, identifier.lexpos, identifier.type, identifier.value))
 
 if __name__ == "__main__":
     main()
