@@ -14,7 +14,7 @@ principal()
           digito := num % 10
           num_invertido := (num_invertido * 10) + digito
           num := num / 10
-     até num <> 0 faça
+     até num <> 0
 
      se num_entrada = num_invertido então {Verifica se o número digitado é igual ao número de saída}
           escreva("É palindromo")

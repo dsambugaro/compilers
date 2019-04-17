@@ -1,4 +1,4 @@
-{Teste compiladores do João Martins Filho}
+Teste compiladores do João Martins Filho}
 inteiro: n, g
 flutuante: d,a
 inteiro fatorial(inteiro: n)
@@ -35,4 +35,3 @@ inteiro principal()
 	leia(n)
 	escreva(fatorial(fatorial(n<1,a),n+2))
 fim
-
