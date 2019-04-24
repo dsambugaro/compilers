@@ -1,7 +1,7 @@
 #! /usr/bin/env python3
 #coding: utf-8
 
-from sys import argv
+from sys import argv, exit
 
 from ply import lex
 
@@ -115,12 +115,22 @@ def t_error(t):
     print("Illegal character '%s'" % t.value[0])
     t.lexer.skip(1)
 
+def print_usage():
+    print("Usage:")
+    print("\tpython {} <path to file.tpp>".format(argv[0]))
+
 def main():
     lexer = lex.lex()
     try:
         data = open(argv[1])
+    except IndexError as e:
+        print("Error: No source code given!\n")
+        print_usage()
+        exit(1)
     except IOError as e:
-        print(e)
+        print("Error: {}".format(str(e)[10:]))
+        print("Please give a valid input file")
+        exit(1)
 
     text = data.read()
     lexer.input(text)
