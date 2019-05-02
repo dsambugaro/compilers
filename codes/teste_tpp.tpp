@@ -1,4 +1,4 @@
-Teste compiladores do João Martins Filho}
+{Teste compiladores do João Martins Filho}
 inteiro: n, g
 flutuante: d,a
 inteiro fatorial(inteiro: n)

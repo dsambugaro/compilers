@@ -4,7 +4,9 @@
 from sys import argv, exit
 from ply import lex
 
-from MyExceptions import CommentInvalidSyntax
+from MyExceptions import CommentInvalidSyntax, IllegalCharacter
+
+last_comment = None
 
 # Reserved words
 reserved = {
@@ -94,9 +96,11 @@ def t_ID(t):
 
 # Ignore Comments
 def t_COMMENT(t):
-     r'{[\d\D]*?}'
-     t.lexer.lineno += len(t.value.split('\n'))-1 # Considering the lines of comments in the total number of lines in the input
-     pass
+    r'{[\d\D]*?}'
+    global last_comment
+    last_comment = (t.value,t.lineno)
+    t.lexer.lineno += len(t.value.split('\n'))-1 # Considering the lines of comments in the total number of lines in the input
+    pass
 
 
 # Some rules
@@ -113,16 +117,20 @@ t_ignore  = ' \t'
 
 # Error handling rule
 def t_error(t):
-    print("Illegal character '%s'" % t.value[0])
     try:
         if t.value[0] == '{' or t.value[0] == '}':
-            t.lexer.skip(1)
-            raise CommentInvalidSyntax("Comment invalid syntax at line {}".format(t.lineno))
+            raise CommentInvalidSyntax("Comment with invalid syntax at line {}".format(t.lineno))
+        else:
+            raise IllegalCharacter("Illegal character '{}' found at line {}".format(t.value[0], t.lineno))
     except CommentInvalidSyntax as error:
         print("Error: {}\n".format(error))
+        print("You last comment was at line {}:\n\t {}\n".format(last_comment[1], last_comment[0]))
         print("Comment example:\n\t{This is a comment}\nComments are always between { }\n")
-        print("Please fix it")
-        print("\n")
+        print("Please fix it\n")
+        exit(1)
+    except IllegalCharacter as error:
+        print("Error: {}\n".format(error))
+        print("Please review yout code syntax \n")
         exit(1)
 
 def main():
