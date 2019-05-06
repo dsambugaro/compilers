@@ -2,10 +2,6 @@
 #coding: utf-8
 
 from sys import argv, exit
-<<<<<<< HEAD
-=======
-
->>>>>>> 040afa01e42d507ca386fc214d4d88e549fad6bc
 from ply import lex
 
 from MyExceptions import CommentInvalidSyntax, IllegalCharacter
@@ -149,7 +145,7 @@ def main():
     try:
         data = open(argv[1])
     except IndexError as e:
-        print("Error: No source code given!\n")
+        print("Error: No source code provided!\n")
         print_usage()
         exit(1)
     except IOError as e:
