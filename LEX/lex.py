@@ -2,6 +2,10 @@
 #coding: utf-8
 
 from sys import argv, exit
+<<<<<<< HEAD
+=======
+
+>>>>>>> 040afa01e42d507ca386fc214d4d88e549fad6bc
 from ply import lex
 
 from MyExceptions import CommentInvalidSyntax, IllegalCharacter
@@ -136,13 +140,22 @@ def t_error(t):
         print("Please review yout code syntax \n")
         exit(1)
 
+def print_usage():
+    print("Usage:")
+    print("\tpython {} <path to file.tpp>".format(argv[0]))
+
 def main():
     lexer = lex.lex()
     try:
         data = open(argv[1])
-    except (IOError, IndexError) as e:
-        print(e)
-        print("Tratar")
+    except IndexError as e:
+        print("Error: No source code given!\n")
+        print_usage()
+        exit(1)
+    except IOError as e:
+        print("Error: {}".format(str(e)[10:]))
+        print("Please give a valid input file")
+        exit(1)
 
     text = data.read()
     lexer.input(text)
