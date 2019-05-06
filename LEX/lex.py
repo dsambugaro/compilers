@@ -91,7 +91,7 @@ def t_ID(t):
     r'[a-zA-Z_]+\w*'
     t.type = reserved.get(t.value,'ID')
     if t.type == 'ID':
-        ID_list.append(t)
+        ID_list.append({t.value:{'token': t, 'column':None, 'type':None, 'value':None}})
     return t
 
 # Ignore Comments
@@ -108,9 +108,13 @@ def t_newline(t):
     r'\n+'
     t.lexer.lineno += len(t.value)
 
-def find_column(input, token):
-    line_start = input.rfind('\n', 0, token.lexpos) + 1
-    return (token.lexpos - line_start) + 1
+def find_column(input_str, token):
+    line_start = input_str.rfind('\n', 0, token.lexpos) + 1
+    aux = input_str.rfind('\t', line_start, token.lexpos)
+    if aux != -1:
+        return (token.lexpos - line_start) + 5
+    else:
+        return (token.lexpos - line_start) + 1
 
 # A string containing ignored characters (spaces and tabs)
 t_ignore  = ' \t'
@@ -124,8 +128,7 @@ def t_error(t):
             raise IllegalCharacter("Illegal character '{}' found at line {}".format(t.value[0], t.lineno))
     except CommentInvalidSyntax as error:
         print("Error: {}\n".format(error))
-        print("You last comment was at line {}:\n\t {}\n".format(last_comment[1], last_comment[0]))
-        print("Comment example:\n\t{This is a comment}\nComments are always between { }\n")
+        print("Comment example:\n\t{Hi! I'm a comment}\nComments are always between { }\n")
         print("Please fix it\n")
         exit(1)
     except IllegalCharacter as error:
@@ -152,14 +155,19 @@ def main():
 
         # print format
         # Line:Column Type
-        # print("{:02d}:{:02d}\t{}".format(tok.lineno, pos, tok.type))
+        print("{:02d}:{:02d}\t{}".format(tok.lineno, pos, tok.type))
     
     print('\n==========================================')
     print('================ ID Table ================\n')
     for identifier in ID_list:
-        pos = find_column(text, identifier)
+        key = list(identifier.keys())[0]
+        token = identifier[key]['token']
+        pos = find_column(text, token)
+        identifier[key]['column'] = pos
+        
+        # print format
         # Line:LexColumn Type Lexeme
-        # print("{:02d}:{:02d}\t{} {}".format(identifier.lineno, identifier.lexpos, identifier.type, identifier.value))
+        print("{:02d}:{:02d}\t{} {}".format(token.lineno, identifier[key]['column'], token.type, token.value))
 
 if __name__ == "__main__":
     main()

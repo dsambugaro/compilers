@@ -2,8 +2,8 @@
 class Error(Exception):
      pass
 
-class CommentInvalidSyntax(Error):
+class CommentInvalidSyntax(SyntaxError):
      pass
 
-class IllegalCharacter(Error):
+class IllegalCharacter(SyntaxError):
      pass
