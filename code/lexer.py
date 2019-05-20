@@ -1,27 +1,28 @@
 #! /usr/bin/env python3
-#coding: utf-8
+# coding: utf-8
 
 from sys import argv, exit
 from ply import lex
 
+from utils import find_column, print_usage
 from MyExceptions import CommentInvalidSyntax, IllegalCharacter
 
 last_comment = None
 
 # Reserved words
 reserved = {
-    'inteiro':'INTEIRO',
-    'flutuante':'FLUTUANTE',
-    'enquanto':'ENQUANTO',
-    'repita':'REPITA',
-    'até':'ATE',
-    'se':'SE',
-    'então':'ENTAO',
-    'senão':'SENAO',
-    'leia':'LEIA',
-    'escreva':'ESCREVA',
-    'retorna':'RETORNA',
-    'fim':'FIM'
+    'inteiro': 'INTEIRO',
+    'flutuante': 'FLUTUANTE',
+    'enquanto': 'ENQUANTO',
+    'repita': 'REPITA',
+    'até': 'ATE',
+    'se': 'SE',
+    'então': 'ENTAO',
+    'senão': 'SENAO',
+    'leia': 'LEIA',
+    'escreva': 'ESCREVA',
+    'retorna': 'RETORNA',
+    'fim': 'FIM'
 }
 
 # List of token names
@@ -50,22 +51,23 @@ tokens = [
 tokens += list(reserved.values())
 
 # Regular expression rules for simple tokens
-t_OPERADOR_SOMA          = r'\+|-'
+t_OPERADOR_SOMA = r'\+|-'
 t_OPERADOR_MULTIPLICACAO = r'\*|/'
-t_OPERADOR_RESTO         = r'%'
-t_OPERADOR_RELACIONAL    = r'>|<|=|<>|>=|<='
-t_OPERADOR_LOGICO        = r'&&|\|\|'
-t_OPERADOR_ATRIBUICAO    = r':='
-t_OPERADOR_NEGACAO       = r'!'
-t_ABREPARENTESES         = r'\('
-t_FECHAPARENTESES        = r'\)'
-t_ABRECOLCHETES          = r'\['
-t_FECHACOLCHETES         = r'\]'
-t_DOISPONTOS             = r':'
-t_VIRGULA                = r','
-t_TEXTO                  = r'\"[\d\D]*?\"'
+t_OPERADOR_RESTO = r'%'
+t_OPERADOR_RELACIONAL = r'>|<|=|<>|>=|<='
+t_OPERADOR_LOGICO = r'&&|\|\|'
+t_OPERADOR_ATRIBUICAO = r':='
+t_OPERADOR_NEGACAO = r'!'
+t_ABREPARENTESES = r'\('
+t_FECHAPARENTESES = r'\)'
+t_ABRECOLCHETES = r'\['
+t_FECHACOLCHETES = r'\]'
+t_DOISPONTOS = r':'
+t_VIRGULA = r','
+t_TEXTO = r'\"[\d\D]*?\"'
 
 ID_list = []
+
 
 def t_NUM_NOTACAO_CIENTIFICA(t):
     r'\d+(\.\d+)?e\d*'
@@ -77,29 +79,35 @@ def t_NUM_NOTACAO_CIENTIFICA(t):
         t.value = float(t.value)
     return t
 
+
 def t_NUM_PONTO_FLUTUANTE(t):
     r'\d*\.\d+'
     t.value = float(t.value)
     return t
+
 
 def t_NUM_INTEIRO(t):
     r'\d+'
     t.value = int(t.value)
     return t
 
+
 def t_ID(t):
     r'[a-zA-Z_]+\w*'
-    t.type = reserved.get(t.value,'ID')
+    t.type = reserved.get(t.value, 'ID')
     if t.type == 'ID':
-        ID_list.append({t.value:{'token': t, 'column':None, 'type':None, 'value':None}})
+        ID_list.append(
+            {t.value: {'token': t, 'column': None, 'type': None, 'value': None}})
     return t
+
 
 # Ignore Comments
 def t_COMMENT(t):
     r'{[\d\D]*?}'
     global last_comment
-    last_comment = (t.value,t.lineno)
-    t.lexer.lineno += len(t.value.split('\n'))-1 # Considering the lines of comments in the total number of lines in the input
+    last_comment = (t.value, t.lineno)
+    # Considering the lines of comments in the total number of lines in the input
+    t.lexer.lineno += len(t.value.split('\n'))-1
     pass
 
 
@@ -108,27 +116,24 @@ def t_newline(t):
     r'\n+'
     t.lexer.lineno += len(t.value)
 
-def find_column(input_str, token):
-    line_start = input_str.rfind('\n', 0, token.lexpos) + 1
-    aux = input_str.rfind('\t', line_start, token.lexpos)
-    if aux != -1:
-        return (token.lexpos - line_start) + 5
-    else:
-        return (token.lexpos - line_start) + 1
 
 # A string containing ignored characters (spaces and tabs)
-t_ignore  = ' \t'
+t_ignore = ' \t'
+
 
 # Error handling rule
 def t_error(t):
     try:
         if t.value[0] == '{' or t.value[0] == '}':
-            raise CommentInvalidSyntax("Comment with invalid syntax at line {}".format(t.lineno))
+            raise CommentInvalidSyntax(
+                "Comment with invalid syntax at line {}".format(t.lineno))
         else:
-            raise IllegalCharacter("Illegal character '{}' found at line {}".format(t.value[0], t.lineno))
+            raise IllegalCharacter(
+                "Illegal character '{}' found at line {}".format(t.value[0], t.lineno))
     except CommentInvalidSyntax as error:
         print("Error: {}\n".format(error))
-        print("Comment example:\n\t{Hi! I'm a comment}\nComments are always between { }\n")
+        print(
+            "Comment example:\n\t{Hi! I'm a comment}\nComments are always between { }\n")
         print("Please fix it\n")
         exit(1)
     except IllegalCharacter as error:
@@ -136,21 +141,21 @@ def t_error(t):
         print("Please review yout code syntax \n")
         exit(1)
 
-def print_usage():
-    print("Usage:")
-    print("\tpython {} <path to file.tpp>".format(argv[0]))
 
 def main():
-    lexer = lex.lex()
+    # lexer = lex.lex()
     try:
+        aux = argv[1].split('.')
+        if aux[-1] != 'tpp':
+            raise IOError("Not a .tpp file!")
         data = open(argv[1])
     except IndexError as e:
         print("Error: No source code provided!\n")
         print_usage()
         exit(1)
     except IOError as e:
-        print("Error: {}".format(str(e)[10:]))
-        print("Please give a valid input file")
+        print("Error: {}".format(str(e)))
+        print("Please give a valid input file\n\n")
         exit(1)
 
     text = data.read()
@@ -165,7 +170,7 @@ def main():
         # print format
         # Line:Column Type
         print("{:02d}:{:02d}\t{}".format(tok.lineno, pos, tok.type))
-    
+
     print('\n==========================================')
     print('================ ID Table ================\n')
     for identifier in ID_list:
@@ -173,10 +178,14 @@ def main():
         token = identifier[key]['token']
         pos = find_column(text, token)
         identifier[key]['column'] = pos
-        
+
         # print format
         # Line:LexColumn Type Lexeme
-        print("{:02d}:{:02d}\t{} {}".format(token.lineno, identifier[key]['column'], token.type, token.value))
+        print("{:02d}:{:02d}\t{} {}".format(token.lineno,
+                                            identifier[key]['column'], token.type, token.value))
+
+
+lexer = lex.lex(optimize=True)
 
 if __name__ == "__main__":
     main()

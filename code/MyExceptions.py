@@ -1,9 +1,11 @@
 
 class Error(Exception):
-     pass
+    pass
+
 
 class CommentInvalidSyntax(SyntaxError):
-     pass
+    pass
+
 
 class IllegalCharacter(SyntaxError):
-     pass
+    pass
