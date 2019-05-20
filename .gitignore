@@ -1,7 +1,14 @@
+# files generated on first run
+lextab.py
+parsetab.py
+parser.out
+
+tree.png
+
 # Some course files
 Automatos/
 Doc/
-codes/lexica-testes/
+tpp_exemples/
 
 # vscode files
 .vscode
