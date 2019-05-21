@@ -1,5 +1,7 @@
 # coding: utf-8
 
+from sys import argv
+
 def find_column(input_str, token):
     line_start = input_str.rfind('\n', 0, token.lexpos) + 1
     aux = input_str.rfind('\t', line_start, token.lexpos)

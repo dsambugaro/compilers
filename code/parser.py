@@ -434,6 +434,7 @@ def p_type(p):
     p[0] = father
     p[1] = new_node(p[1].upper(), father)
 
+
 def p_type_error(p):
     '''
     tipo : error
@@ -492,20 +493,20 @@ def p_action(p):
     | retorna
     '''
 
-    error_line = p.lineno(1)
-    father = new_node('ERROR::{}'.format(error_line))
-    logging.error(
-        "Syntax error parsing action at line {}".format(error_line))
-    parser.errok()
+    father = new_node('acao')
     p[0] = father
     p[1].parent = father
+
 
 def p_action_error(p):
     '''
     acao : error
     '''
-
-    father = new_node('acao')
+    error_line = p.lineno(1)
+    father = new_node('ERROR::{}'.format(error_line))
+    logging.error(
+        "Syntax error parsing action at line {}".format(error_line))
+    parser.errok()
     p[0] = father
     p[1].parent = father
 
@@ -722,6 +723,7 @@ def p_expression(p):
     father = new_node('expressao')
     p[0] = father
     p[1].parent = father
+
 
 def p_expression_error(p):
     '''
@@ -1101,7 +1103,8 @@ def p_error(p):
         logging.error("Unexpected token '{}' at '{}:{}' (line:column)".format(
             p.value, p.lineno, find_column(input_text, p)))
     else:
-        logging.critical("EOF error -- Unknown cause\n\t Please review your syntax.")
+        logging.critical(
+            "EOF error -- Syntax error found at end of file\n\t Possible end token (fim) missing\n\t Please review your syntax.")
 
 
 def main():
@@ -1110,11 +1113,14 @@ def main():
     parser = yacc.yacc(optimize=True)
     print_tree = False
     try:
-        aux = argv[1].split('.')
-        if aux[-1] != 'tpp':
-            raise IOError("Not a .tpp file!")
-        input_file = open(argv[1])
-        input_text = input_file.read()
+        if len(argv) > 1:
+            aux = argv[1].split('.')
+            if aux[-1] != 'tpp':
+                raise IOError("Not a .tpp file!")
+            input_file = open(argv[1])
+            input_text = input_file.read()
+        else:
+            raise IndexError
     except IndexError as e:
         print("Error: No source code provided!\n")
         print_usage()
@@ -1124,6 +1130,7 @@ def main():
         print("Please give a valid input file\n\n")
         exit(1)
 
+    print('\n\n')
     parser.parse(input_text)
 
     if print_tree:
@@ -1135,13 +1142,14 @@ def main():
         # for pre, fill, node in RenderTree(root):
         #     if node.children == ():
         #         print("{}".format(node.name.split(' ')[-1]), end=' ')
-    print('\n\n')
+    print('\n* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * \n')
     print("Generating AST, please wait...")
     if root.children != ():
         DotExporter(root).to_picture("tree.png")
         print("AST was successfully generated.\nOutput file: 'tree.png'")
     else:
         logging.error("Unable to generate AST -- Syntax nodes not found")
+    print('\n\n')
 
 
 if __name__ == "__main__":
