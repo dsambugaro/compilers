@@ -5,21 +5,22 @@ import logging
 from sys import argv, exit
 from ply import yacc
 
+from termcolor import colored
 from anytree.exporter import DotExporter
 from anytree import Node, RenderTree
 
 from utils import find_column, print_usage
-from lexer import tokens, ID_list
+from lexer import tokens
 
 nodes_count = 0
-root = Node('Root')
-nodes = []
-
+root = None
+hasError = False
 parser = None
 input_text = None
+ID_table = {}
 
 
-def new_node(nodeName, parent=None, id=None, data=None):
+def new_node(nodeName, parent=None, id=None, data=None, **kwargs):
     global nodes_count
     if (id):
         node_ID = id
@@ -27,9 +28,9 @@ def new_node(nodeName, parent=None, id=None, data=None):
         node_ID = str(nodes_count) + ': ' + str(nodeName)
     nodes_count += 1
     if parent:
-        node = Node(node_ID, parent)
+        node = Node(node_ID, parent, **kwargs)
     else:
-        node = Node(node_ID)
+        node = Node(node_ID, **kwargs)
     return node
 
 
@@ -37,8 +38,10 @@ def p_program(p):
     '''
     programa : lista_declaracoes
     '''
+    global root
 
-    father = new_node('Programa', root)
+    father = new_node('Programa')
+    root = father
     p[0] = father
     p[1].parent = father
 
@@ -120,7 +123,8 @@ def p_variable_declaration(p):
     declaracao_variaveis : tipo DOISPONTOS lista_variaveis
     '''
 
-    father = new_node('declaracao_variaveis')
+    father = new_node('declaracao_variaveis',
+                      declaration_type=p[1].children[0].name.split(' ')[1])
     p[0] = father
     p[1].parent = father
     p[2] = new_node('DOISPONTOS', father)
@@ -213,10 +217,19 @@ def p_variable(p):
 
     father = new_node('variavel')
     p[0] = father
-    aux = new_node('ID', father)
-    new_node(p[1], aux)
+    aux = new_node('ID', father, line=p.lineno(1), ID_type='variable')
+    new_node(p[1], aux, line=p.lineno(1))
     if len(p) > 2:
         p[2].parent = father
+
+    ID_table[aux.name] = {
+        'label': p[1],
+        'line': p.lineno(1),
+        'ID_type': 'variable',
+        'type': None,
+        'value': None,
+        'scope': None
+    }
 
 
 def p_variable_error(p):
@@ -242,7 +255,7 @@ def p_index(p):
     | ABRECOLCHETES expressao FECHACOLCHETES
     '''
 
-    father = new_node('index')
+    father = new_node('index', line=p.lineno(0))
     p[0] = father
     if len(p) == 4:
         p[1] = new_node('ABRECOLCHETES', father)
@@ -315,15 +328,25 @@ def p_header(p):
     cabecalho : ID ABREPARENTESES lista_parametros FECHAPARENTESES corpo FIM
     '''
 
-    father = new_node('cabecalho')
+    father = new_node('cabecalho', line=p.lineno(0))
     p[0] = father
-    aux = new_node('ID', father)
-    new_node(p[1], aux)
+    aux = new_node('ID', father, line=p.lineno(
+        1), ID_type='function_header', params=None)
+    new_node(p[1], aux, line=p.lineno(1))
     p[2] = new_node('ABREPARENTESES', father)
     p[3].parent = father
     p[4] = new_node('FECHAPARENTESES', father)
     p[5].parent = father
-    p[6] = new_node('FIM', father)
+    p[6] = new_node('FIM', father, line=p.lineno(6))
+
+    ID_table[aux.name] = {
+        'label': p[1],
+        'line': p.lineno(1),
+        'ID_type': 'function_header',
+        'params': None,
+        'type': None,
+        'scope': None
+    }
 
 
 def p_header_error(p):
@@ -348,21 +371,6 @@ def p_header_error(p):
     p[6] = new_node('FIM', father)
 
 
-def p_param_list(p):
-    ''' lista_parametros : lista_parametros VIRGULA lista_parametros
-    | parametro
-    | vazio
-    '''
-
-    father = new_node('lista_parametros')
-    p[0] = father
-    p[1].parent = father
-
-    if len(p) > 2:
-        p[2] = new_node('VIRUGLA', father)
-        p[3].parent = father
-
-
 def p_param_list_error(p):
     ''' lista_parametros : error VIRGULA lista_parametros
     | lista_parametros VIRGULA error
@@ -374,6 +382,21 @@ def p_param_list_error(p):
     logging.error(
         "Syntax error parsing param list at line {}".format(error_line))
     parser.errok()
+    p[0] = father
+    p[1].parent = father
+
+    if len(p) > 2:
+        p[2] = new_node('VIRUGLA', father)
+        p[3].parent = father
+
+
+def p_param_list(p):
+    ''' lista_parametros : lista_parametros VIRGULA lista_parametros
+    | parametro
+    | vazio
+    '''
+
+    father = new_node('lista_parametros')
     p[0] = father
     p[1].parent = father
 
@@ -394,8 +417,16 @@ def p_param(p):
 
     if p[2] == ':':
         p[2] = new_node('DOISPONTOS', father)
-        aux = new_node('ID', father)
-        new_node(p[3], aux)
+        aux = new_node('ID', father, line=p.lineno(3), ID_type='param')
+        new_node(p[3], aux, line=p.lineno(3))
+        ID_table[aux.name] = {
+            'label': p[3],
+            'line': p.lineno(3),
+            'ID_type': 'param',
+            'type': None,
+            'value': None,
+            'scope': None
+        }
     else:
         p[2] = new_node('ABRECOLCHETES', father)
         p[3] = new_node('FECHACOLCHETES', father)
@@ -519,18 +550,18 @@ def p_if(p):
 
     father = new_node('se')
     p[0] = father
-    p[1] = new_node('SE', father)
+    p[1] = new_node('SE', father, line=p.lineno(1))
     p[2].parent = father
-    p[3] = new_node('ENTAO', father)
+    p[3] = new_node('ENTAO', father, line=p.lineno(3))
     p[4].parent = father
 
     if len(p) == 8:
-        p[5] = new_node('SENAO', father)
+        p[5] = new_node('SENAO', father, line=p.lineno(5))
         p[6].parent = father
-        p[7] = new_node('FIM', father)
+        p[7] = new_node('FIM', father, line=p.lineno(7))
 
     else:
-        p[5] = new_node('FIM', father)
+        p[5] = new_node('FIM', father, line=p.lineno(5))
 
 
 def p_if_error(p):
@@ -569,9 +600,9 @@ def p_while(p):
 
     father = new_node('repita')
     p[0] = father
-    p[1] = new_node('REPITA', father)
+    p[1] = new_node('REPITA', father, line=p.lineno(1))
     p[2].parent = father
-    p[3] = new_node('ATE', father)
+    p[3] = new_node('ATE', father, line=p.lineno(3))
     p[4].parent = father
 
 
@@ -601,7 +632,7 @@ def p_assignment(p):
     father = new_node('atribuicao')
     p[0] = father
     p[1].parent = father
-    p[2] = new_node('OPERADOR_ATRIBUICAO', father)
+    p[2] = new_node('OPERADOR_ATRIBUICAO', father, line=p.lineno(2))
     p[3].parent = father
 
 
@@ -629,7 +660,7 @@ def p_read(p):
 
     father = new_node('leia')
     p[0] = father
-    p[1] = new_node('LEIA', father)
+    p[1] = new_node('LEIA', father, line=p.lineno(1), scope=None)
     p[2] = new_node('ABREPARENTESES', father)
     p[3].parent = father
     p[4] = new_node('FECHAPARENTESES', father)
@@ -659,7 +690,7 @@ def p_write(p):
 
     father = new_node('escreva')
     p[0] = father
-    p[1] = new_node('ESCREVA', father)
+    p[1] = new_node('ESCREVA', father, line=p.lineno(1), scope=None)
     p[2] = new_node('ABREPARENTESES', father)
     p[3].parent = father
     p[4] = new_node('FECHAPARENTESES', father)
@@ -688,9 +719,11 @@ def p_return(p):
     retorna : RETORNA ABREPARENTESES expressao FECHAPARENTESES
     '''
 
-    father = new_node('retorna')
+    father = new_node('retorna', line=p.lineno(1),
+                      scope=None, return_type=None)
     p[0] = father
-    p[1] = new_node('RETORNA', father)
+    p[1] = new_node('RETORNA', father, line=p.lineno(1),
+                    scope=None, return_type=None)
     p[2] = new_node('ABREPARENTESES', father)
     p[3].parent = father
     p[4] = new_node('FECHAPARENTESES', father)
@@ -889,7 +922,9 @@ def p_unary_expression(p):
     father = new_node('expressao_unaria')
     p[0] = father
     if p[1] == '!':
-        p[1] = new_node('OPERADOR_NEGACAO', father)
+        aux = new_node('OPERADOR_NEGACAO', father, line=p.lineno(1))
+        new_node(p[1], aux, line=p.lineno(1))
+
     else:
         p[1].parent = father
 
@@ -925,7 +960,8 @@ def p_relational_operator(p):
     '''
     father = new_node('operador_relacional')
     p[0] = father
-    p[1] = new_node('OPERADOR_RELACIONAL', father)
+    aux = new_node('OPERADOR_RELACIONAL', father, line=p.lineno(1))
+    new_node(p[1], aux, line=p.lineno(1))
 
 
 def p_sum_operator(p):
@@ -934,7 +970,8 @@ def p_sum_operator(p):
     '''
     father = new_node('operador_soma')
     p[0] = father
-    p[1] = new_node('OPERADOR_SOMA', father)
+    aux = new_node('OPERADOR_SOMA', father, line=p.lineno(1))
+    new_node(p[1], aux, line=p.lineno(1))
 
 
 def p_logical_operator(p):
@@ -943,7 +980,8 @@ def p_logical_operator(p):
     '''
     father = new_node('operador_logico')
     p[0] = father
-    p[1] = new_node('OPERADOR_LOGICO', father)
+    aux = new_node('OPERADOR_LOGICO', father, line=p.lineno(1))
+    new_node(p[1], aux, line=p.lineno(1))
 
 
 def p_not_operator(p):
@@ -952,7 +990,8 @@ def p_not_operator(p):
     '''
     father = new_node('operador_negacao')
     p[0] = father
-    p[1] = new_node('OPERADOR_NEGACAO', father)
+    aux = new_node('OPERADOR_NEGACAO', father, line=p.lineno(1))
+    new_node(p[1], aux, line=p.lineno(1))
 
 
 def p_multiplication_operator(p):
@@ -961,7 +1000,8 @@ def p_multiplication_operator(p):
     '''
     father = new_node('operador_multiplicacao')
     p[0] = father
-    p[1] = new_node('OPERADOR_MULTIPLICACAO', father)
+    aux = new_node('OPERADOR_MULTIPLICACAO', father, line=p.lineno(1))
+    new_node(p[1], aux, line=p.lineno(1))
 
 
 def p_factor(p):
@@ -977,7 +1017,6 @@ def p_factor(p):
     if len(p) > 2:
         p[1] = new_node('ABREPARENTESES', father)
         p[2].parent = father
-
         p[3] = new_node('FECHAPARENTESES', father)
     else:
         p[1].parent = father
@@ -1014,14 +1053,14 @@ def p_number(p):
     father = new_node('numero')
     p[0] = father
     if str(p[1]).find('.') == -1:
-        aux = new_node('NUM_INTEIRO', father)
-        new_node(p[1], aux)
+        aux = new_node('NUM_INTEIRO', father, line=p.lineno(1))
+        new_node(p[1], aux, line=p.lineno(1))
     elif str(p[1]).find('e') >= 0:
-        aux = new_node('NUM_NOTACAO_CIENTIFICA', father)
-        new_node(p[1], aux)
+        aux = new_node('NUM_NOTACAO_CIENTIFICA', father, line=p.lineno(1))
+        new_node(p[1], aux, line=p.lineno(1))
     else:
-        aux = new_node('NUM_PONTO_FLUTUANTE', father)
-        new_node(p[1], aux)
+        aux = new_node('NUM_PONTO_FLUTUANTE', father, line=p.lineno(1))
+        new_node(p[1], aux, line=p.lineno(1))
 
 
 def p_function_call(p):
@@ -1031,12 +1070,22 @@ def p_function_call(p):
 
     father = new_node('chamada_funcao')
     p[0] = father
-    aux = new_node('ID', father)
-    new_node(p[1], aux)
+    aux = new_node('ID', father, line=p.lineno(
+        1), ID_type='function_call', args=None)
+    new_node(p[1], aux, line=p.lineno(1))
 
     p[2] = new_node('ABREPARENTESES', father)
     p[3].parent = father
     p[4] = new_node('FECHAPARENTESES', father)
+
+    ID_table[aux.name] = {
+        'label': p[1],
+        'line': p.lineno(1),
+        'ID_type': 'function_call',
+        'args': None,
+        'type': None,
+        'scope': None
+    }
 
 
 def p_function_call_error(p):
@@ -1099,6 +1148,8 @@ def p_empty(p):
 
 def p_error(p):
     global input_text
+    global hasError
+    hasError = True
     if p:
         logging.error("Unexpected token '{}' at '{}:{}' (line:column)".format(
             p.value, p.lineno, find_column(input_text, p)))
@@ -1107,11 +1158,14 @@ def p_error(p):
             "EOF error -- Syntax error found at end of file\n\t Possible end token (fim) missing\n\t Please review your syntax.")
 
 
-def main():
+def main(logging_level, export_AST=False, print_tree=False):
+    levelname = colored('%(levelname)s', 'white', attrs=['bold'])
+    logging.basicConfig(format='{}:%(message)s'.format(levelname),
+                        level=logging_level)
     global input_text
     global parser
+    global hasError
     parser = yacc.yacc(optimize=True)
-    print_tree = False
     try:
         if len(argv) > 1:
             aux = argv[1].split('.')
@@ -1133,26 +1187,24 @@ def main():
     print('\n\n')
     parser.parse(input_text)
 
-    if print_tree:
+    if print_tree and root:
         for pre, fill, node in RenderTree(root):
             print("{}{}".format(pre, node.name))
 
         print('===================================  \n')
 
-        # for pre, fill, node in RenderTree(root):
-        #     if node.children == ():
-        #         print("{}".format(node.name.split(' ')[-1]), end=' ')
-    print('\n* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * \n')
-    print("Generating AST, please wait...")
-    if root.children != ():
-        DotExporter(root).to_picture("tree.png")
-        print("AST was successfully generated.\nOutput file: 'tree.png'")
+    if root and root.children != ():
+        if export_AST:
+            print('\n* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * \n')
+            print("Generating AST, please wait...")
+            DotExporter(root).to_picture("tree.png")
+            print("AST was successfully generated.\nOutput file: 'tree.png'")
     else:
         logging.error("Unable to generate AST -- Syntax nodes not found")
     print('\n\n')
 
+    return root, hasError
+
 
 if __name__ == "__main__":
-    logging.basicConfig(format='%(levelname)s:%(message)s',
-                        level=logging.WARNING)
-    main()
+    main(logging.WARNING)

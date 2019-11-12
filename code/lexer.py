@@ -54,7 +54,7 @@ tokens += list(reserved.values())
 t_OPERADOR_SOMA = r'\+|-'
 t_OPERADOR_MULTIPLICACAO = r'\*|/'
 t_OPERADOR_RESTO = r'%'
-t_OPERADOR_RELACIONAL = r'>|<|=|<>|>=|<='
+t_OPERADOR_RELACIONAL = r'>=|<=|<>|>|<|='
 t_OPERADOR_LOGICO = r'&&|\|\|'
 t_OPERADOR_ATRIBUICAO = r':='
 t_OPERADOR_NEGACAO = r'!'
